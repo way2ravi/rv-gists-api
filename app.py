@@ -7,6 +7,9 @@ from urllib.error import URLError, HTTPError
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/health":
+            self.generate_json(200, {"status": "healthy"})
+            return
 
         print(f"Received GET request for {self.path}")
 

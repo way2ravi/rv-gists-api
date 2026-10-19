@@ -40,7 +40,15 @@ class HTTPRequestHandelerTest(unittest.TestCase):
         self.enterContext(
             patch("app.CACHE_TTL", 60)
         )
+    def test_health_endpoint(self):
+        self.handler.path = "/health"
 
+        self.handler.do_GET()
+
+        self.handler.generate_json.assert_called_once_with(
+            200, {"status": "healthy"})
+        self.urlopen.assert_not_called()
+        
     def test_empty_username(self):
         print("\nTesting empty username returns 400...")
         self.handler.path = "/"
