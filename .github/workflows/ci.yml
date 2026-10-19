@@ -57,7 +57,7 @@ jobs:
           import urllib.request
           
           url = "http://localhost:8080/octocat"          # Wait for the API to be ready (adjust the timeout as needed)
-          for attempts in range(1, 31):
+          for attempt in range(1, 31):
               try:
                   with urllib.request.urlopen(url, timeout=3) as response:
                       print(f"Attempt {attempt}: HTTP {response.status}", flush=True)
