@@ -43,7 +43,7 @@ jobs:
           docker build -t rv-gists-api:ci .
       - name: Start Docker container
         run: |
-          docker run -d --name rv-api -p 127.0.0.1:8080:8000 rv-gists-api:ci
+          docker run -d --name rv-api -p 127.0.0.1:8080:8080 rv-gists-api:ci
       - name: Inspect API container logs
         run: |
           echo "Inspecting API container logs:"
