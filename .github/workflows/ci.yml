@@ -1,3 +1,7 @@
+permissions:
+  contents: read
+  packages: write
+
 name: Python API CI
 on:
   push:
@@ -75,6 +79,26 @@ jobs:
         env:
           API_BASE_URL: http://localhost:8080
         run: python scripts/run_tests.py integration
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag and publish tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          IMAGE="ghcr.io/${REPOSITORY,,}"
+          TAG="sha-${COMMIT_SHA}"
+
+          docker tag rv-gists-api:ci "$IMAGE:$TAG"
+          docker push "$IMAGE:$TAG"
+
+          echo "Published $IMAGE:$TAG"
       - name: Show container logs if tests fail
         if: failure()
         run: |
