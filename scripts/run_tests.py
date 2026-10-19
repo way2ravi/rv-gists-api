@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-suite = unittest.defaultTestLoader.discover('tests', pattern='test_*.py')
+suite = unittest.defaultTestLoader.discover('tests', pattern='test*.py')
 
 count = suite.countTestCases()
 print(f"Discovered {count} test cases.")
