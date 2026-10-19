@@ -1,0 +1,41 @@
+name: Python API CI
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.13
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest
+      - name: Lint with flake8 for code analysis and style guide enforcement
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        #   # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        #   flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Run tests count
+        run: python scripts/run.py        
+      - name: Run unit tests pytest for testing the API endpoints and functionality
+        run: |
+          pytest tests/
+      - name: Run unittest for testing the API endpoints and functionality
+        run: |
+          python -m unittest discover -s tests -p "test*.py" -v
+      - name: Build Docker image
+        run: |
+          docker build -t my-python-api:${{ github.sha }} .
+                
