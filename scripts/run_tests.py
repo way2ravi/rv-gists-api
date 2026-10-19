@@ -10,12 +10,19 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # Make project modules importable while unittest discovers tests.
 sys.path.insert(0, str(PROJECT_ROOT))
 
+if len(sys.argv) != 2 or sys.argv[1] not in ("unit", "integration"):
+    print("Usage: python scripts/run_tests.py [unit|integration]")
+    sys.exit(2)
+
+test_type = sys.argv[1]
+test_directory = PROJECT_ROOT / "tests" / test_type
+
 # Load matching tests from the tests directory with the repository as package root.
-suite = unittest.defaultTestLoader.discover(start_dir=str(PROJECT_ROOT / "tests"), pattern='test*.py', top_level_dir=str(PROJECT_ROOT))
+suite = unittest.defaultTestLoader.discover(start_dir=str(test_directory), pattern='test*.py', top_level_dir=str(PROJECT_ROOT))
 
 # Count discovered test cases and report the count before running them.
 count = suite.countTestCases()
-print(f"Discovered {count} test cases", flush=True)
+print(f"Discovered {count} {test_type} test cases", flush=True)
 
 # Treat an empty discovery result as a configuration or naming error.
 if count == 0:

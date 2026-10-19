@@ -27,15 +27,53 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         #   # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         #   flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Run tests count
-        run: python scripts/run_tests.py        
-      - name: Run unit tests pytest for testing the API endpoints and functionality
+    #   - name: Run tests count
+    #     run: python scripts/run_tests.py        
+    #   - name: Run unit tests pytest for testing the API endpoints and functionality
+    #     run: |
+    #       pytest tests/
+    #   - name: Run unittest for testing the API endpoints and functionality
+    #     run: |
+    #       python -m unittest discover -s tests -p "test*.py" -v
+      - name: Run unit tests
         run: |
-          pytest tests/
-      - name: Run unittest for testing the API endpoints and functionality
-        run: |
-          python -m unittest discover -s tests -p "test*.py" -v
+          python scripts/run_tests.py unit
       - name: Build Docker image
         run: |
-          docker build -t my-python-api:${{ github.sha }} .
-                
+          docker build -t rv-gists-api:ci .
+      - name: Start Docker container
+        run: |
+          docker run -d --name rv-api -p 8000:8000 rv-gists-api:ci
+      - name: Wait for the API to be ready
+        run: |
+          python - <<'PY'
+          import time
+          import urllib.request
+          
+          url = "http://localhost:8080/octocat"          # Wait for the API to be ready (adjust the timeout as needed)
+          for attempts in range(30):
+              try:
+                  with urllib.request.urlopen(url, timeout=3) as response:
+                      if response.status == 200:
+                          print("API is ready.")
+                          break
+              except Exception:
+                time.sleep(2)  # Wait for 2 seconds before retrying
+
+          else:
+              raise SystemExit("API readiness check failed")
+          PY
+      - name: Run integration tests
+        env:
+          API_BASE_URL: http://localhost:8080
+        run: python scripts/run_tests.py integration
+      - name: Show container logs if tests fail
+        if: failure()
+        run: |
+          echo "Integration tests failed. Showing container logs:"
+          docker logs rv-api
+      - name: Stop and remove Docker container
+        if: always()
+        run: |
+          docker stop rv-api
+          docker rm rv-api
