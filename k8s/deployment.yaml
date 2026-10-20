@@ -17,10 +17,27 @@ spec:
     spec:
       containers:
         - name: rv-gists-api
-          image: ghcr.io/way2ravi/rv-gists-api:sha-89b1935d7e7ea74fb9799108cf7ce9cc0e4d0fc2
+          image: ghcr.io/way2ravi/rv-gists-api:sha-101ce898b2a98a035622f308f367ca16490d89cf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m
