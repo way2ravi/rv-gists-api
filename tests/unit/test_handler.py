@@ -21,7 +21,10 @@ class HTTPRequestHandelerTest(unittest.TestCase):
         self.handler = object.__new__(app.RequestHandler)  # Create an instance of HTTPRequestHandler without calling __init__
         self.handler.path = "/octocat"  # Set the path to /gists for testing
 
-        self.handler.generate_json = Mock()  # Mock the generate_json method to capture its calls
+        def capture_response(status_code, result):
+            self.handler.response_status = status_code
+
+        self.handler.generate_json = Mock(side_effect=capture_response)
 
         self.gist = {
             "id": "1",
@@ -47,6 +50,7 @@ class HTTPRequestHandelerTest(unittest.TestCase):
 
         self.handler.generate_json.assert_called_once_with(
             200, {"status": "healthy"})
+        self.assertEqual(self.handler.response_status, 200)
         self.urlopen.assert_not_called()
         
     def test_empty_username(self):
@@ -57,6 +61,7 @@ class HTTPRequestHandelerTest(unittest.TestCase):
             400, {"error": "Enter a username in the URL"}
         )
         self.urlopen.assert_not_called()  # Ensure that urlopen was not called since the username is empty
+        self.assertEqual(self.handler.response_status, 400)
 
     def test_gists_and_cache_result(self):
         print("\nTesting gists and cache result...")
@@ -159,6 +164,7 @@ class HTTPRequestHandelerTest(unittest.TestCase):
         )
 
         self.assertNotIn("octocat", app.CACHE)  # Ensure that the error response is not cached
+        self.assertEqual(self.handler.response_status, 404)
 
     def test_url_errors_not_cached(self):
         print("\nTesting URL errors are not cached...")
@@ -192,6 +198,47 @@ class HTTPRequestHandelerTest(unittest.TestCase):
         )
         print(app.CACHE["octocat"]["gists"])
         self.assertEqual(app.CACHE["octocat"]["gists"], expected)  # Ensure that only public gists are cached
+
+    def test_request_logging(self):
+        self.handler = object.__new__(app.RequestHandler) 
+        self.handler.path = "/health"
+
+        with patch.object(self.handler, "process_get") as mock_process:
+            with patch("app.logger.info") as mock_logger:
+                self.handler.do_GET()
+
+        mock_process.assert_called_once()
+
+        log_entry = json.loads(mock_logger.call_args.args[0])
+
+        self.assertEqual(log_entry["event"], "http_request")
+        self.assertEqual(log_entry["method"], "GET")
+        self.assertEqual(log_entry["path"], "/health")
+        self.assertEqual(log_entry["status_code"], 500)
+        self.assertFalse(log_entry["cache_hit"])
+        self.assertGreaterEqual(log_entry["duration_ms"], 0)
+
+    def test_cache_hit_logging(self):
+        app.CACHE["octocat"] = {
+            "gists": [self.gist],
+            "saved_at": 1000
+        }
+
+        with patch("app.logger.info") as mock_logger:
+            self.handler.do_GET()
+
+        self.urlopen.assert_not_called()
+
+        self.handler.generate_json.assert_called_once_with(
+            200, [self.gist]
+        )
+
+        log_entry = json.loads(mock_logger.call_args.args[0])
+
+        self.assertEqual(log_entry["event"], "http_request")
+        self.assertEqual(log_entry["status_code"], 200)
+        self.assertTrue(log_entry["cache_hit"])
+
 if __name__ == "__main__":
     unittest.main()
 
