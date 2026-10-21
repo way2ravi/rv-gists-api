@@ -45,6 +45,14 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t rv-gists-api:ci .
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: rv-gists-api:ci
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
       - name: Start Docker container
         run: |
           docker run -d --name rv-api -p 127.0.0.1:8080:8080 rv-gists-api:ci
@@ -60,7 +68,7 @@ jobs:
           import time
           import urllib.request
           
-          url = "http://localhost:8080/octocat"          # Wait for the API to be ready (adjust the timeout as needed)
+          url = "http://localhost:8080/health"          # Wait for the API to be ready (adjust the timeout as needed)
           for attempt in range(1, 31):
               try:
                   with urllib.request.urlopen(url, timeout=3) as response:
